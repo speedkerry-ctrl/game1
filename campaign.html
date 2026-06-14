@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>闖關模式 – 翻翻樂</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:system-ui,-apple-system,sans-serif;background:#f8f8f6;}
+body{min-height:100dvh;}
+
+/* ── nav ── */
+nav{background:#fff;border-bottom:1px solid #eee;padding:0 1.25rem;display:flex;align-items:center;height:50px;gap:10px;position:sticky;top:0;z-index:100;}
+.nav-logo{font-size:15px;font-weight:700;color:#1a1a1a;text-decoration:none;white-space:nowrap;}
+.nav-links{display:flex;gap:4px;margin-left:auto;}
+.nav-link{font-size:12px;padding:5px 9px;border-radius:7px;color:#666;text-decoration:none;}
+.nav-link.active{background:#1a1a1a;color:#fff;}
+
+/* ── container ── */
+.container{width:100%;max-width:860px;margin:0 auto;padding:1rem 1rem 2rem;}
+@media(min-width:600px){.container{padding:1.25rem 2rem 2.5rem;}}
+
+/* ── screen ── */
+.screen{display:none;}.screen.active{display:block;}
+
+/* ── 選年級畫面 ── */
+.page-title{font-size:clamp(20px,5vw,28px);font-weight:700;color:#1a1a1a;text-align:center;margin-bottom:6px;}
+.page-sub{font-size:14px;color:#888;text-align:center;margin-bottom:1.75rem;}
+.grade-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:1.5rem;}
+.grade-card{background:#fff;border:1.5px solid #e5e5e5;border-radius:14px;padding:1.1rem 0.75rem;text-align:center;cursor:pointer;transition:all .15s;position:relative;}
+.grade-card:hover{border-color:#aaa;transform:translateY(-1px);}
+.grade-card.locked{opacity:.45;cursor:not-allowed;}
+.grade-card .g-emoji{font-size:28px;margin-bottom:6px;}
+.grade-card .g-name{font-size:14px;font-weight:700;color:#1a1a1a;}
+.grade-card .g-desc{font-size:11px;color:#888;margin-top:3px;}
+.grade-card .g-stars{font-size:13px;color:#EF9F27;margin-top:5px;letter-spacing:1px;}
+.badge-best{position:absolute;top:8px;right:8px;background:#FAEEDA;color:#633806;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;}
+
+/* ── 選關卡畫面 ── */
+.back-btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#666;cursor:pointer;margin-bottom:1rem;padding:4px 0;}
+.stage-header{margin-bottom:1.25rem;}
+.stage-header h2{font-size:clamp(17px,4vw,22px);font-weight:700;color:#1a1a1a;}
+.stage-header p{font-size:13px;color:#888;margin-top:3px;}
+.stage-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;}
+.stage-btn{background:#fff;border:1.5px solid #e5e5e5;border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;position:relative;transition:all .15s;}
+.stage-btn:hover{border-color:#aaa;}
+.stage-btn.locked{opacity:.4;cursor:not-allowed;}
+.stage-btn.done{border-color:#97C459;background:#F0FAE6;}
+.stage-btn .s-num{font-size:20px;font-weight:700;color:#1a1a1a;margin-bottom:3px;}
+.stage-btn .s-type{font-size:11px;color:#888;}
+.stage-btn .s-stars{font-size:14px;color:#EF9F27;letter-spacing:1px;margin-top:4px;}
+.stage-btn .s-badge{position:absolute;top:6px;right:6px;font-size:9px;font-weight:700;padding:2px 5px;border-radius:5px;}
+.s-badge.new{background:#E6F1FB;color:#185FA5;}
+.s-badge.done{background:#E1F5EE;color:#085041;}
+
+/* ── 遊戲畫面 ── */
+.game-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.game-title{font-size:15px;font-weight:700;color:#1a1a1a;flex:1;}
+.game-type-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;}
+.type-flip{background:#E6F1FB;color:#185FA5;}
+.type-math{background:#EDE9FE;color:#4C1D95;}
+.type-type{background:#FAEEDA;color:#633806;}
+
+/* 計時條 */
+.timer-wrap{margin-bottom:10px;}
+.timer-bar-bg{background:#eee;border-radius:999px;height:8px;overflow:hidden;}
+.timer-bar{height:8px;border-radius:999px;background:#378ADD;transition:width .5s linear,background .3s;}
+.timer-bar.warn{background:#EF9F27;}
+.timer-bar.danger{background:#E24B4A;}
+.timer-info{display:flex;justify-content:space-between;align-items:center;margin-top:5px;}
+.timer-num{font-size:clamp(14px,3vw,18px);font-weight:700;color:#1a1a1a;}
+.timer-stage{font-size:12px;color:#888;}
+
+/* 拯救機制 */
+.rescue-bar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.rescue-btn{display:flex;align-items:center;gap:5px;background:#fff;border:1.5px solid #e5e5e5;border-radius:10px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;color:#1a1a1a;}
+.rescue-btn:hover:not(:disabled){border-color:#aaa;background:#f8f8f8;}
+.rescue-btn:disabled{opacity:.35;cursor:not-allowed;}
+.rescue-btn .r-icon{font-size:16px;}
+.rescue-btn .r-count{background:#f0f0ee;border-radius:5px;padding:1px 6px;font-size:11px;margin-left:2px;}
+
+/* 狀態列 */
+.status-row{display:flex;gap:8px;margin-bottom:8px;}
+.status-card{background:#fff;border:1px solid #eee;border-radius:8px;padding:6px 10px;text-align:center;flex:1;}
+.status-label{font-size:10px;color:#888;}
+.status-val{font-size:clamp(15px,3vw,19px);font-weight:700;color:#1a1a1a;}
+
+.msg-bar{text-align:center;font-size:13px;font-weight:600;min-height:20px;margin-bottom:8px;color:#888;}
+.msg-bar.ok{color:#166534;}.msg-bar.err{color:#991B1B;}.msg-bar.rescue{color:#185FA5;}
+
+/* ── 翻牌格 ── */
+.grid{display:grid;gap:6px;margin-bottom:10px;}
+.cell{perspective:900px;cursor:pointer;touch-action:manipulation;}
+.inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .32s cubic-bezier(.4,0,.2,1);}
+.cell.flip .inner,.cell.done .inner{transform:rotateY(180deg);}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid transparent;}
+.back{background:#e8e8e4;border-color:#d5d5d0;}
+.back-q{font-weight:700;color:#aaa;}
+.front{transform:rotateY(180deg);border-color:#e5e5e5;gap:2px;}
+.front.animal-card{background:#fff;}
+.front.animal-card .c-icon{line-height:1;}
+.front.animal-card .c-en{font-weight:600;color:#555;}
+.front.animal-card .c-zh{color:#bbb;}
+.front.eq-card{background:#EEF2FF;}.front.eq-card .c-main{font-weight:700;color:#1E3A8A;text-align:center;padding:0 3px;line-height:1.25;}
+.front.ans-card{background:#fff;}.front.ans-card .c-main{font-weight:700;color:#1a1a1a;}
+.cell.hint .back{background:#FEF3C7;border-color:#EF9F27;animation:hintPulse .6s ease infinite alternate;}
+@keyframes hintPulse{from{border-color:#EF9F27;}to{border-color:#F59E0B;background:#FFFBEB;}}
+.cell.done .front{background:#DCFCE7;border-color:#86EFAC;}.cell.done .front *{color:#166534!important;}
+.cell.wrong .inner{animation:wrongShake .3s ease;}
+.cell.wrong .front{background:#FEE2E2!important;border-color:#FCA5A5!important;}
+@keyframes wrongShake{0%,100%{transform:rotateY(180deg) translateX(0);}25%{transform:rotateY(180deg) translateX(-5px);}75%{transform:rotateY(180deg) translateX(5px);}}
+@keyframes popDone{0%{transform:rotateY(180deg) scale(.82);}60%{transform:rotateY(180deg) scale(1.07);}100%{transform:rotateY(180deg) scale(1);}}
+.cell.done .inner{animation:popDone .28s ease forwards;}
+
+/* ── 打字模式 ── */
+.typing-wrap{text-align:center;margin-bottom:10px;}
+.typing-prompt{font-size:clamp(14px,3vw,18px);color:#888;margin-bottom:6px;}
+.typing-word{font-size:clamp(28px,7vw,46px);font-weight:700;color:#1a1a1a;letter-spacing:3px;margin-bottom:8px;min-height:56px;}
+.typing-input{width:100%;padding:12px 14px;font-size:clamp(16px,3vw,20px);border-radius:10px;border:1.5px solid #ddd;outline:none;text-align:center;transition:border .15s;}
+.typing-input:focus{border-color:#378ADD;}
+.typing-input.correct{border-color:#22C55E;background:#F0FAE6;}
+.typing-input.wrong{border-color:#EF4444;background:#FEE2E2;}
+.typing-score{font-size:14px;color:#888;margin-top:8px;}
+.typing-progress{height:6px;background:#eee;border-radius:999px;margin-top:10px;overflow:hidden;}
+.typing-progress-bar{height:100%;border-radius:999px;background:#378ADD;transition:width .3s;}
+
+/* ── 結果畫面 ── */
+.result-wrap{background:#fff;border:1px solid #eee;border-radius:16px;padding:1.5rem;text-align:center;}
+.result-emoji{font-size:48px;margin-bottom:8px;}
+.result-title{font-size:clamp(18px,5vw,24px);font-weight:700;color:#1a1a1a;margin-bottom:6px;}
+.result-sub{font-size:14px;color:#888;margin-bottom:1.25rem;}
+.result-stars{font-size:36px;letter-spacing:6px;margin-bottom:1rem;}
+.result-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1.25rem;}
+.result-stat{background:#f8f8f6;border-radius:10px;padding:10px 6px;}
+.result-stat-val{font-size:clamp(18px,4vw,24px);font-weight:700;color:#1a1a1a;}
+.result-stat-label{font-size:11px;color:#888;margin-top:2px;}
+.result-btn-row{display:flex;gap:8px;}
+.result-btn-row button{flex:1;padding:11px;font-size:13px;font-weight:700;border-radius:10px;border:1.5px solid #ddd;background:#fff;cursor:pointer;}
+.result-btn-row .btn-primary{background:#185FA5;color:#fff;border-color:#185FA5;}
+
+/* confetti */
+.confetti-wrap{position:relative;height:0;overflow:visible;pointer-events:none;}
+.dot{position:absolute;width:8px;height:8px;border-radius:50%;animation:fall 1.4s ease forwards;}
+@keyframes fall{0%{transform:translateY(0) rotate(0);opacity:1;}100%{transform:translateY(160px) rotate(720deg);opacity:0;}}
+
+.btn-row{display:flex;gap:8px;margin-top:8px;}
+.btn-row button{flex:1;padding:9px;font-size:12px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer;font-weight:500;}
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">🎮 翻翻樂</a>
+  <div class="nav-links">
+    <a class="nav-link" href="index.html">首頁</a>
+    <a class="nav-link" href="animal.html">英文</a>
+    <a class="nav-link" href="math.html">數學</a>
+    <a class="nav-link" href="typing.html">打字</a>
+    <a class="nav-link active" href="campaign.html">闖關</a>
+  </div>
+</nav>
+<div class="container">
+
+<!-- 選年級 -->
+<div class="screen active" id="screen-grade">
+  <div class="page-title">闖關模式 🏆</div>
+  <div class="page-sub">選擇年級，每級 10 關，限時完成！</div>
+  <div class="grade-grid" id="grade-grid"></div>
+</div>
+
+<!-- 選關卡 -->
+<div class="screen" id="screen-stage">
+  <div class="back-btn" onclick="show('screen-grade')">← 返回年級</div>
+  <div class="stage-header">
+    <h2 id="stage-grade-title"></h2>
+    <p id="stage-grade-desc"></p>
+  </div>
+  <div class="stage-list" id="stage-list"></div>
+</div>
+
+<!-- 遊戲中 -->
+<div class="screen" id="screen-game">
+  <div class="game-header">
+    <span class="game-title" id="game-label">第 1 關</span>
+    <span class="game-type-badge" id="game-type-badge">翻牌</span>
+  </div>
+  <div class="timer-wrap">
+    <div class="timer-bar-bg"><div class="timer-bar" id="timer-bar" style="width:100%"></div></div>
+    <div class="timer-info">
+      <span class="timer-num" id="timer-num">60</span>
+      <span class="timer-stage" id="timer-stage"></span>
+    </div>
+  </div>
+  <div class="rescue-bar" id="rescue-bar"></div>
+  <div class="status-row" id="status-row"></div>
+  <div class="msg-bar" id="msg"></div>
+  <div class="confetti-wrap" id="confetti"></div>
+
+  <!-- 翻牌遊戲容器 -->
+  <div id="flip-game-wrap">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <!-- 打字遊戲容器 -->
+  <div id="type-game-wrap" style="display:none">
+    <div class="typing-wrap">
+      <div class="typing-prompt" id="type-prompt">看圖，打出中文</div>
+      <div class="typing-word" id="type-display">🐱</div>
+      <input class="typing-input" id="type-input" placeholder="輸入中文答案" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="typing-score" id="type-score">答對 0 / 0</div>
+      <div class="typing-progress"><div class="typing-progress-bar" id="type-prog" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div id="win-area"></div>
+  <div class="btn-row">
+    <button onclick="exitGame()">← 放棄</button>
+    <button onclick="restartStage()">重新此關</button>
+  </div>
+</div>
+
+<!-- 關卡結果 -->
+<div class="screen" id="screen-result">
+  <div class="result-wrap">
+    <div class="result-emoji" id="r-emoji">🎉</div>
+    <div class="result-title" id="r-title">闖關成功！</div>
+    <div class="result-sub" id="r-sub"></div>
+    <div class="result-stars" id="r-stars">★★★</div>
+    <div class="result-stats" id="r-stats"></div>
+    <div class="confetti-wrap" id="confetti2"></div>
+    <div class="result-btn-row">
+      <button onclick="goStageSelect()">關卡選擇</button>
+      <button class="btn-primary" id="r-next-btn" onclick="nextStage()">下一關 →</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+<script>
+// ═══════════════════════════════════════════
+// 資料定義
+// ═══════════════════════════════════════════
+const GRADES = [
+  {
+    id:'g1', emoji:'🌱', name:'小學一年級', desc:'個位加減 × 動物英文',
+    stages: buildStages('g1')
+  },
+  {
+    id:'g2', emoji:'🌿', name:'小學二年級', desc:'十位加減 × 食物英文',
+    stages: buildStages('g2')
+  },
+  {
+    id:'g3', emoji:'🌳', name:'小學三年級', desc:'乘法九九 × 交通英文',
+    stages: buildStages('g3')
+  },
+  {
+    id:'g4', emoji:'🌸', name:'小學四年級', desc:'混合四則 × 自然英文',
+    stages: buildStages('g4')
+  },
+  {
+    id:'g5', emoji:'🏔️', name:'小學五年級', desc:'百位運算 × 運動英文',
+    stages: buildStages('g5')
+  },
+  {
+    id:'g6', emoji:'🚀', name:'小學六年級', desc:'大數混合 × 太空英文',
+    stages: buildStages('g6')
+  },
+];
+
+function buildStages(gid){
+  // 每年級 10 關，前 3 翻牌，中 4 數學，後 3 打字
+  const types = ['flip','flip','flip','math','math','math','math','type','type','type'];
+  return types.map((t,i)=>({
+    num: i+1,
+    type: t,
+    grade: gid,
+    bestStars: 0,
+    done: false,
+  }));
+}
+
+// 詞彙庫
+const VOCAB = {
+  animals:[
+    {e:'🐱',en:'Cat',zh:'貓'},{e:'🐶',en:'Dog',zh:'狗'},{e:'🦁',en:'Lion',zh:'獅子'},
+    {e:'🐘',en:'Elephant',zh:'大象'},{e:'🐧',en:'Penguin',zh:'企鵝'},
+    {e:'🐰',en:'Rabbit',zh:'兔子'},{e:'🐯',en:'Tiger',zh:'老虎'},
+    {e:'🐵',en:'Monkey',zh:'猴子'},{e:'🦊',en:'Fox',zh:'狐狸'},{e:'🐻',en:'Bear',zh:'熊'},
+    {e:'🦋',en:'Butterfly',zh:'蝴蝶'},{e:'🐠',en:'Fish',zh:'魚'},
+  ],
+  food:[
+    {e:'🍎',en:'Apple',zh:'蘋果'},{e:'🍌',en:'Banana',zh:'香蕉'},{e:'🍕',en:'Pizza',zh:'披薩'},
+    {e:'🍦',en:'Ice cream',zh:'冰淇淋'},{e:'🍩',en:'Donut',zh:'甜甜圈'},
+    {e:'🍓',en:'Strawberry',zh:'草莓'},{e:'🌽',en:'Corn',zh:'玉米'},
+    {e:'🍉',en:'Watermelon',zh:'西瓜'},{e:'🍇',en:'Grapes',zh:'葡萄'},{e:'🥕',en:'Carrot',zh:'紅蘿蔔'},
+  ],
+  transport:[
+    {e:'🚗',en:'Car',zh:'汽車'},{e:'🚌',en:'Bus',zh:'公車'},{e:'✈️',en:'Airplane',zh:'飛機'},
+    {e:'🚀',en:'Rocket',zh:'火箭'},{e:'🚁',en:'Helicopter',zh:'直升機'},
+    {e:'🚲',en:'Bicycle',zh:'腳踏車'},{e:'🚂',en:'Train',zh:'火車'},{e:'⛵',en:'Sailboat',zh:'帆船'},
+  ],
+  nature:[
+    {e:'🌞',en:'Sun',zh:'太陽'},{e:'🌙',en:'Moon',zh:'月亮'},{e:'⭐',en:'Star',zh:'星星'},
+    {e:'🌈',en:'Rainbow',zh:'彩虹'},{e:'🌊',en:'Wave',zh:'海浪'},{e:'🌸',en:'Flower',zh:'花'},
+    {e:'❄️',en:'Snow',zh:'雪'},{e:'🌋',en:'Volcano',zh:'火山'},{e:'🍄',en:'Mushroom',zh:'蘑菇'},
+  ],
+  sports:[
+    {e:'⚽',en:'Soccer',zh:'足球'},{e:'🏀',en:'Basketball',zh:'籃球'},{e:'🎾',en:'Tennis',zh:'網球'},
+    {e:'🥊',en:'Boxing',zh:'拳擊'},{e:'🎯',en:'Darts',zh:'飛鏢'},{e:'🎳',en:'Bowling',zh:'保齡球'},
+  ],
+  space:[
+    {e:'🪐',en:'Saturn',zh:'土星'},{e:'☄️',en:'Comet',zh:'彗星'},{e:'👨‍🚀',en:'Astronaut',zh:'太空人'},
+    {e:'🔭',en:'Telescope',zh:'望遠鏡'},{e:'🌍',en:'Earth',zh:'地球'},
+    {e:'🌌',en:'Galaxy',zh:'銀河'},{e:'🛸',en:'UFO',zh:'幽浮'},
+  ],
+};
+
+// 年級→詞彙類別
+const GRADE_VOCAB = {g1:'animals',g2:'food',g3:'transport',g4:'nature',g5:'sports',g6:'space'};
+
+// 年級→數學設定
+const GRADE_MATH = {
+  g1:{op:'add',diff:{gen:()=>{const a=rn(1,9),b=rn(1,9);return{a,b,sym:'+',ans:a+b};}}},
+  g2:{op:'sub',diff:{gen:()=>{const b=rn(1,9),a=rn(b+1,20);return{a,b,sym:'−',ans:a-b};}}},
+  g3:{op:'mul',diff:{gen:()=>{const a=rn(2,9),b=rn(2,9);return{a,b,sym:'×',ans:a*b};}}},
+  g4:{op:'mix',diff:{gen:()=>mixMath('mid')}},
+  g5:{op:'add',diff:{gen:()=>{const a=rn(100,500),b=rn(100,500);return{a,b,sym:'+',ans:a+b};}}},
+  g6:{op:'mix',diff:{gen:()=>mixMath('hard')}},
+};
+
+function mixMath(lv){
+  const ops={
+    mid:[()=>{const a=rn(10,50),b=rn(10,50);return{a,b,sym:'+',ans:a+b};},
+         ()=>{const b=rn(5,30),a=rn(b+5,99);return{a,b,sym:'−',ans:a-b};}],
+    hard:[()=>{const a=rn(100,500),b=rn(100,500);return{a,b,sym:'+',ans:a+b};},
+          ()=>{const b=rn(100,400),a=rn(b+50,999);return{a,b,sym:'−',ans:a-b};},
+          ()=>{const a=rn(2,9),b=rn(2,9);return{a,b,sym:'×',ans:a*b};}],
+  };
+  return pick(ops[lv])();
+}
+
+// 關卡設定：格子大小 / 時間 / 打字題數
+function stageConfig(stageNum, type){
+  // stageNum 1-10，難度遞增
+  const timeBase = type==='flip' ? [70,65,60,55,50] : type==='math' ? [75,65,60,55,45] : [80,70,60,55,50];
+  const idx = Math.min(Math.floor((stageNum-1)/2), timeBase.length-1);
+  const t = timeBase[idx];
+  const flipPairs = stageNum<=3?6:stageNum<=6?8:10;
+  const typePairs = stageNum<=3?5:stageNum<=6?7:9;
+  return {time:t, flipPairs, typePairs};
+}
+
+// ═══════════════════════════════════════════
+// 進度儲存
+// ═══════════════════════════════════════════
+function saveProgress(){
+  try{
+    const d={};
+    GRADES.forEach(g=>{
+      d[g.id]=g.stages.map(s=>({done:s.done,bestStars:s.bestStars}));
+    });
+    localStorage.setItem('campaign_progress',JSON.stringify(d));
+  }catch(e){}
+}
+function loadProgress(){
+  try{
+    const d=JSON.parse(localStorage.getItem('campaign_progress')||'{}');
+    GRADES.forEach(g=>{
+      if(d[g.id]) d[g.id].forEach((s,i)=>{
+        g.stages[i].done=s.done;
+        g.stages[i].bestStars=s.bestStars;
+      });
+    });
+  }catch(e){}
+}
+loadProgress();
+
+// ═══════════════════════════════════════════
+// 音效（iOS + Android）
+// ═══════════════════════════════════════════
+let audioUnlocked=false,voiceEN=null,voiceZH=null;
+function loadVoices(){
+  const vs=speechSynthesis.getVoices();
+  voiceEN=vs.find(v=>v.lang==='en-US')||vs.find(v=>v.lang.startsWith('en'))||null;
+  voiceZH=vs.find(v=>v.lang==='zh-TW')||vs.find(v=>v.lang.startsWith('zh'))||null;
+}
+if(window.speechSynthesis){loadVoices();speechSynthesis.addEventListener('voiceschanged',loadVoices);}
+function unlockAudio(){
+  if(audioUnlocked||!window.speechSynthesis)return;
+  const u=new SpeechSynthesisUtterance('');u.volume=0;speechSynthesis.speak(u);
+  audioUnlocked=true;loadVoices();
+}
+document.addEventListener('touchstart',unlockAudio,{once:true});
+document.addEventListener('mousedown',unlockAudio,{once:true});
+let resumeTimer=null;
+function keepAlive(){resumeTimer=setInterval(()=>{if(speechSynthesis.paused)speechSynthesis.resume();},200);}
+function stopKeepAlive(){clearInterval(resumeTimer);}
+function speakOne(text,lang,voice,cb){
+  if(!window.speechSynthesis){cb&&cb();return;}
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang=lang;u.rate=0.95;u.pitch=1.05;u.volume=1;
+  if(voice)u.voice=voice;
+  u.onstart=()=>keepAlive();
+  u.onend=()=>{stopKeepAlive();cb&&cb();};
+  u.onerror=()=>{stopKeepAlive();cb&&cb();};
+  speechSynthesis.speak(u);
+}
+function speakBilingual(en,zh){
+  if(!window.speechSynthesis)return;
+  stopKeepAlive();speechSynthesis.cancel();
+  setTimeout(()=>{speakOne(en,'en-US',voiceEN,()=>{setTimeout(()=>speakOne(zh,'zh-TW',voiceZH,null),80);});},60);
+}
+function speakZH(text){
+  if(!window.speechSynthesis)return;
+  stopKeepAlive();speechSynthesis.cancel();
+  setTimeout(()=>speakOne(text,'zh-TW',voiceZH,null),60);
+}
+
+// ═══════════════════════════════════════════
+// helpers
+// ═══════════════════════════════════════════
+function rn(a,b){return a+Math.floor(Math.random()*(b-a+1));}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function setMsg(t,cls=''){const el=document.getElementById('msg');el.textContent=t;el.className='msg-bar '+cls;}
+
+// ═══════════════════════════════════════════
+// 選年級
+// ═══════════════════════════════════════════
+function buildGradeGrid(){
+  const grid=document.getElementById('grade-grid');
+  grid.innerHTML='';
+  GRADES.forEach((g,gi)=>{
+    const totalDone=g.stages.filter(s=>s.done).length;
+    const totalStars=g.stages.reduce((sum,s)=>sum+s.bestStars,0);
+    const locked=gi>0&&GRADES[gi-1].stages.filter(s=>s.done).length<5;
+    const el=document.createElement('div');
+    el.className='grade-card'+(locked?' locked':'');
+    el.innerHTML=`
+      <div class="g-emoji">${g.emoji}</div>
+      <div class="g-name">${g.name}</div>
+      <div class="g-desc">${g.desc}</div>
+      <div class="g-stars">${totalStars>0?'★'.repeat(Math.min(Math.ceil(totalStars/5),3))+'☆'.repeat(3-Math.min(Math.ceil(totalStars/5),3)):''}</div>
+      ${totalDone>0?`<div class="badge-best">${totalDone}/10</div>`:''}
+    `;
+    if(!locked) el.onclick=()=>openGrade(gi);
+    grid.appendChild(el);
+  });
+}
+
+let curGradeIdx=0, curStageIdx=0;
+
+function openGrade(gi){
+  curGradeIdx=gi;
+  const g=GRADES[gi];
+  document.getElementById('stage-grade-title').textContent=g.emoji+' '+g.name;
+  document.getElementById('stage-grade-desc').textContent=g.desc;
+  buildStageList(g);
+  show('screen-stage');
+}
+
+function buildStageList(g){
+  const list=document.getElementById('stage-list');
+  list.innerHTML='';
+  g.stages.forEach((s,si)=>{
+    const locked=si>0&&!g.stages[si-1].done;
+    const el=document.createElement('div');
+    el.className='stage-btn'+(locked?' locked':s.done?' done':'');
+    const typeLabel={flip:'翻牌記憶',math:'數學計算',type:'中文打字'}[s.type];
+    const typeBadgeText=s.done?'完成':'新';
+    const typeBadgeCls=s.done?'done':'new';
+    el.innerHTML=`
+      <div class="s-num">第${si+1}關</div>
+      <div class="s-type">${typeLabel}</div>
+      <div class="s-stars">${s.bestStars>0?'★'.repeat(s.bestStars)+'☆'.repeat(3-s.bestStars):'☆☆☆'}</div>
+      ${!locked?`<span class="s-badge ${typeBadgeCls}">${typeBadgeText}</span>`:''}
+    `;
+    if(!locked) el.onclick=()=>startStage(si);
+    list.appendChild(el);
+  });
+}
+
+// ═══════════════════════════════════════════
+// 拯救機制定義
+// ═══════════════════════════════════════════
+const RESCUE_DEFS=[
+  {id:'hint',  emoji:'💡', label:'翻牌提示', desc:'亮出一對位置',  uses:2, types:['flip']},
+  {id:'time',  emoji:'⏰', label:'加時',     desc:'+15秒',        uses:2, types:['flip','math','type']},
+  {id:'skip',  emoji:'⏭️', label:'跳過題目', desc:'跳過這道題',    uses:1, types:['math','type']},
+  {id:'slow',  emoji:'🐢', label:'慢速模式', desc:'倒數速度減半',  uses:1, types:['flip','math','type']},
+];
+
+// ═══════════════════════════════════════════
+// 遊戲狀態
+// ═══════════════════════════════════════════
+let stage=null, timerInterval=null, timeLeft=60, timeTotal=60;
+let rescues={}, slowMode=false;
+let flipCards=[], flipOpen=[], flipLock=false, flipLeft=0, flipTries=0, flipCombo=0;
+let typeWords=[], typeIdx=0, typeScore=0, typeTotal=0;
+let mathCards=[], mathOpen=[], mathLock=false, mathLeft=0, mathTries=0, mathCombo=0;
+
+function startStage(si){
+  curStageIdx=si;
+  const g=GRADES[curGradeIdx];
+  stage=g.stages[si];
+  const cfg=stageConfig(si+1, stage.type);
+  timeLeft=cfg.time; timeTotal=cfg.time;
+  slowMode=false;
+
+  // 初始化拯救道具
+  rescues={};
+  RESCUE_DEFS.forEach(r=>{ if(r.types.includes(stage.type)) rescues[r.id]=r.uses; });
+
+  show('screen-game');
+  document.getElementById('game-label').textContent=`第 ${si+1} 關`;
+  const badge=document.getElementById('game-type-badge');
+  badge.textContent={flip:'翻牌記憶',math:'數學計算',type:'中文打字'}[stage.type];
+  badge.className='game-type-badge '+{flip:'type-flip',math:'type-math',type:'type-type'}[stage.type];
+  document.getElementById('timer-stage').textContent=`${g.name} · 第${si+1}關`;
+  document.getElementById('win-area').innerHTML='';
+  document.getElementById('confetti').innerHTML='';
+
+  // 顯示/隱藏遊戲容器
+  document.getElementById('flip-game-wrap').style.display=stage.type!=='type'?'block':'none';
+  document.getElementById('type-game-wrap').style.display=stage.type==='type'?'block':'none';
+
+  renderRescueBar();
+
+  if(stage.type==='flip') initFlipGame(cfg,si);
+  else if(stage.type==='math') initMathGame(cfg,si);
+  else initTypeGame(cfg,si);
+
+  startTimer();
+}
+
+function restartStage(){startStage(curStageIdx);}
+function exitGame(){stopTimer();speechSynthesis.cancel();show('screen-stage');}
+function goStageSelect(){stopTimer();speechSynthesis.cancel();buildStageList(GRADES[curGradeIdx]);show('screen-stage');}
+function nextStage(){
+  const nextIdx=curStageIdx+1;
+  if(nextIdx<GRADES[curGradeIdx].stages.length) startStage(nextIdx);
+  else{buildGradeGrid();show('screen-grade');}
+}
+
+// ═══════════════════════════════════════════
+// 計時器
+// ═══════════════════════════════════════════
+function startTimer(){
+  stopTimer();
+  updateTimerUI();
+  timerInterval=setInterval(()=>{
+    if(!slowMode||Math.random()>0.5){
+      timeLeft=Math.max(0,timeLeft-1);
+      updateTimerUI();
+    }
+    if(timeLeft<=0){stopTimer();onTimeUp();}
+  },1000);
+}
+function stopTimer(){clearInterval(timerInterval);timerInterval=null;}
+function updateTimerUI(){
+  const pct=timeLeft/timeTotal*100;
+  const bar=document.getElementById('timer-bar');
+  bar.style.width=pct+'%';
+  bar.className='timer-bar'+(pct<20?' danger':pct<40?' warn':'');
+  document.getElementById('timer-num').textContent=timeLeft+'s';
+}
+function onTimeUp(){
+  speechSynthesis.cancel();
+  finishStage(false,0);
+}
+
+// ═══════════════════════════════════════════
+// 拯救道具 UI
+// ═══════════════════════════════════════════
+function renderRescueBar(){
+  const bar=document.getElementById('rescue-bar');
+  bar.innerHTML='';
+  RESCUE_DEFS.forEach(r=>{
+    if(!r.types.includes(stage.type)) return;
+    const cnt=rescues[r.id]||0;
+    const btn=document.createElement('button');
+    btn.className='rescue-btn';
+    btn.disabled=cnt<=0;
+    btn.innerHTML=`<span class="r-icon">${r.emoji}</span>${r.label}<span class="r-count">${cnt}</span>`;
+    btn.title=r.desc;
+    btn.onclick=()=>useRescue(r.id,btn);
+    bar.appendChild(btn);
+  });
+}
+function updateRescueUI(){
+  document.querySelectorAll('.rescue-btn').forEach((btn,i)=>{
+    const r=RESCUE_DEFS.filter(x=>x.types.includes(stage.type))[i];
+    if(!r)return;
+    const cnt=rescues[r.id]||0;
+    btn.disabled=cnt<=0;
+    btn.querySelector('.r-count').textContent=cnt;
+  });
+}
+function useRescue(id){
+  if((rescues[id]||0)<=0)return;
+  rescues[id]--;
+  updateRescueUI();
+  unlockAudio();
+  if(id==='time'){
+    timeLeft=Math.min(timeLeft+15,timeTotal+15);
+    timeTotal=Math.max(timeTotal,timeLeft);
+    updateTimerUI();
+    setMsg('⏰ 加時 +15 秒！','rescue');
+  } else if(id==='hint'){
+    useHintRescue();
+  } else if(id==='skip'){
+    useSkipRescue();
+  } else if(id==='slow'){
+    slowMode=true;
+    setMsg('🐢 慢速模式啟動！倒數減半','rescue');
+    setTimeout(()=>setMsg(''),2000);
+  }
+}
+
+// ═══════════════════════════════════════════
+// ── 翻牌遊戲 ──
+// ═══════════════════════════════════════════
+function initFlipGame(cfg,si){
+  const vocabKey=GRADE_VOCAB[GRADES[curGradeIdx].id];
+  const pool=VOCAB[vocabKey]||VOCAB.animals;
+  const pairs=shuffle([...pool]).slice(0,cfg.flipPairs);
+  const deck=[];
+  pairs.forEach((item,i)=>{
+    deck.push({id:i,en:item.en,zh:item.zh,emoji:item.e,matched:false});
+    deck.push({id:i,en:item.en,zh:item.zh,emoji:item.e,matched:false});
+  });
+  flipCards=shuffle(deck);
+  flipOpen=[];flipLock=false;flipLeft=cfg.flipPairs;flipTries=0;flipCombo=0;
+  setMsg('翻開兩張一樣的！');
+  renderStatusRow();
+  renderFlipGrid();
+}
+function renderFlipGrid(){
+  const cols=flipLeft<=6?4:flipLeft<=10?5:6;
+  const grid=document.getElementById('grid');
+  const cellSize=calcCellSize(cols);
+  const iconSz=Math.max(Math.floor(cellSize*0.34),13);
+  const txtSz=Math.max(Math.floor(cellSize*0.12),7);
+  const qSz=Math.max(Math.floor(cellSize*0.22),11);
+  grid.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+  grid.innerHTML='';
+  flipCards.forEach((c,i)=>{
+    const cell=document.createElement('div');
+    cell.className='cell'+(c.matched?' flip done':'');
+    cell.style.height=cellSize+'px';
+    cell.dataset.i=i;
+    cell.innerHTML=`<div class="inner">
+      <div class="face back"><div class="back-q" style="font-size:${qSz}px">?</div></div>
+      <div class="face front animal-card">
+        <span class="c-icon" style="font-size:${iconSz}px">${c.emoji}</span>
+        <span class="c-en" style="font-size:${txtSz}px">${c.en.toUpperCase()}</span>
+        <span class="c-zh" style="font-size:${txtSz}px">${c.zh}</span>
+      </div>
+    </div>`;
+    cell.addEventListener('click',()=>onFlipTap(i));
+    grid.appendChild(cell);
+  });
+}
+function calcCellSize(cols){
+  const w=(document.querySelector('.container').offsetWidth||340)-32;
+  return Math.min(Math.max(Math.floor((w-6*(cols-1))/cols),44),110);
+}
+function getFlipEl(i){return document.querySelector(`[data-i="${i}"]`);}
+function onFlipTap(i){
+  unlockAudio();
+  if(flipLock)return;
+  const c=flipCards[i];if(c.matched||flipOpen.includes(i))return;
+  const el=getFlipEl(i);
+  el.classList.remove('hint');
+  el.classList.add('flip');
+  speakBilingual(c.en,c.zh);
+  setMsg('🔊 '+c.en+' · '+c.zh);
+  flipOpen.push(i);
+  if(flipOpen.length===2){
+    flipTries++;renderStatusRow();
+    const[ai,bi]=flipOpen,a=flipCards[ai],b=flipCards[bi],ea=getFlipEl(ai),eb=getFlipEl(bi);
+    if(a.id===b.id){
+      flipCombo++;
+      setTimeout(()=>{
+        a.matched=true;b.matched=true;
+        ea.classList.add('done');eb.classList.add('done');
+        setMsg('配對成功！'+a.en,'ok');
+        if(flipCombo>1)spawnConfetti('confetti');
+        flipOpen=[];flipLeft--;renderStatusRow();
+        if(flipLeft<=0){stopTimer();finishStage(true,calcFlipStars());}
+      },300);
+    }else{
+      flipCombo=0;flipLock=true;
+      setTimeout(()=>{
+        ea.classList.add('wrong');eb.classList.add('wrong');
+        setMsg(a.en+' ≠ '+b.en,'err');
+        setTimeout(()=>{
+          ea.classList.remove('flip','wrong');eb.classList.remove('flip','wrong');
+          flipOpen=[];flipLock=false;
+          setMsg('繼續找！');
+        },800);
+      },300);
+    }
+  }
+}
+function calcFlipStars(){
+  const cfg=stageConfig(curStageIdx+1,'flip');
+  const ratio=flipTries/cfg.flipPairs;
+  return ratio<=1.3?3:ratio<=1.8?2:1;
+}
+function useHintRescue(){
+  const unmatched=flipCards.map((c,i)=>({c,i})).filter(x=>!x.c.matched&&!flipOpen.includes(x.i));
+  if(unmatched.length<2){setMsg('已無可提示的牌','rescue');return;}
+  const ids=[...new Set(unmatched.map(x=>x.c.id))];
+  const hintId=pick(ids);
+  unmatched.filter(x=>x.c.id===hintId).slice(0,2).forEach(x=>{
+    const el=getFlipEl(x.i);
+    el.classList.add('hint');
+    setTimeout(()=>el.classList.remove('hint'),2500);
+  });
+  setMsg('💡 提示：閃爍的兩張是一對！','rescue');
+}
+function useSkipRescue(){
+  setMsg('⏭️ 此遊戲不支援跳過','rescue');
+}
+function renderStatusRow(){
+  if(stage.type==='flip'){
+    document.getElementById('status-row').innerHTML=`
+      <div class="status-card"><div class="status-label">剩餘對</div><div class="status-val">${flipLeft}</div></div>
+      <div class="status-card"><div class="status-label">翻牌次數</div><div class="status-val">${flipTries}</div></div>
+      <div class="status-card"><div class="status-label">連擊</div><div class="status-val">x${flipCombo}</div></div>`;
+  } else if(stage.type==='math'){
+    document.getElementById('status-row').innerHTML=`
+      <div class="status-card"><div class="status-label">剩餘對</div><div class="status-val">${mathLeft}</div></div>
+      <div class="status-card"><div class="status-label">翻牌次數</div><div class="status-val">${mathTries}</div></div>
+      <div class="status-card"><div class="status-label">連擊</div><div class="status-val">x${mathCombo}</div></div>`;
+  } else {
+    document.getElementById('status-row').innerHTML=`
+      <div class="status-card"><div class="status-label">答對</div><div class="status-val">${typeScore}</div></div>
+      <div class="status-card"><div class="status-label">剩餘題目</div><div class="status-val">${typeTotal-typeIdx}</div></div>
+      <div class="status-card"><div class="status-label">正確率</div><div class="status-val">${typeIdx>0?Math.round(typeScore/typeIdx*100):100}%</div></div>`;
+  }
+}
+
+// ═══════════════════════════════════════════
+// ── 數學翻牌 ──
+// ═══════════════════════════════════════════
+function initMathGame(cfg,si){
+  const mathCfg=GRADE_MATH[GRADES[curGradeIdx].id];
+  const usedEq=new Set(),usedAns=new Set(),pairs=[];
+  let att=0;
+  while(pairs.length<cfg.flipPairs&&att<5000){
+    att++;
+    const{a,b,sym,ans}=mathCfg.diff.gen();
+    const eq=`${a}${sym}${b}`;
+    if(usedEq.has(eq)||usedAns.has(ans))continue;
+    usedEq.add(eq);usedAns.add(ans);
+    pairs.push({eq,ans});
+  }
+  const deck=[];
+  pairs.forEach((p,i)=>{
+    deck.push({id:i,kind:'eq',display:p.eq+'=?',ans:p.ans,matched:false});
+    deck.push({id:i,kind:'ans',display:String(p.ans),ans:p.ans,matched:false});
+  });
+  mathCards=shuffle(deck);
+  mathOpen=[];mathLock=false;mathLeft=cfg.flipPairs;mathTries=0;mathCombo=0;
+  setMsg('翻開算式配對答案！');
+  renderStatusRow();
+  renderMathGrid();
+}
+function renderMathGrid(){
+  const cols=mathLeft<=6?4:mathLeft<=10?5:6;
+  const grid=document.getElementById('grid');
+  const cellSize=calcCellSize(cols);
+  const ansSz=Math.max(Math.round(cellSize*0.30),12);
+  const eqSz=Math.max(Math.round(eqFont(cellSize,8)),8);
+  const qSz=Math.max(Math.round(cellSize*0.2),10);
+  grid.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+  grid.innerHTML='';
+  mathCards.forEach((c,i)=>{
+    const cell=document.createElement('div');
+    cell.className='cell'+(c.matched?' flip done':'');
+    cell.style.height=cellSize+'px';cell.dataset.i=i;
+    const frontCls=c.kind==='eq'?'eq-card':'ans-card';
+    const sz=c.kind==='eq'?eqSz:ansSz;
+    cell.innerHTML=`<div class="inner">
+      <div class="face back"><div class="back-q" style="font-size:${qSz}px">${c.kind==='eq'?'📝':'🔢'}</div></div>
+      <div class="face front ${frontCls}"><span class="c-main" style="font-size:${sz}px">${c.display}</span></div>
+    </div>`;
+    cell.addEventListener('click',()=>onMathTap(i));
+    grid.appendChild(cell);
+  });
+}
+function eqFont(cellSize,len){
+  const base=cellSize*0.22;
+  if(len<=3)return base;if(len<=5)return base*0.85;if(len<=7)return base*0.72;return base*0.6;
+}
+function getMathEl(i){return document.querySelector(`[data-i="${i}"]`);}
+function onMathTap(i){
+  unlockAudio();
+  if(mathLock)return;
+  const c=mathCards[i];if(c.matched||mathOpen.includes(i))return;
+  const el=getMathEl(i);
+  el.classList.remove('hint');el.classList.add('flip');
+  c.kind==='eq'
+    ?speakZH(c.display.replace(/\+/g,'加').replace(/−/g,'減').replace(/×/g,'乘以').replace(/=/g,'等於'))
+    :speakZH(c.display);
+  setMsg((c.kind==='eq'?'📝 ':'🔢 ')+c.display);
+  mathOpen.push(i);
+  if(mathOpen.length===2){
+    mathTries++;renderStatusRow();
+    const[ai,bi]=mathOpen,a=mathCards[ai],b=mathCards[bi],ea=getMathEl(ai),eb=getMathEl(bi);
+    const isMatch=a.id===b.id&&a.kind!==b.kind;
+    if(isMatch){
+      mathCombo++;
+      setTimeout(()=>{
+        a.matched=true;b.matched=true;
+        ea.classList.add('done');eb.classList.add('done');
+        const eqC=a.kind==='eq'?a:b;
+        setMsg('配對！'+eqC.display+(mathCombo>1?' 連擊 x'+mathCombo+'！':''),'ok');
+        if(mathCombo>1)spawnConfetti('confetti');
+        mathOpen=[];mathLeft--;renderStatusRow();
+        if(mathLeft<=0){stopTimer();finishStage(true,calcFlipStars());}
+      },300);
+    }else{
+      mathCombo=0;mathLock=true;
+      setTimeout(()=>{
+        ea.classList.add('wrong');eb.classList.add('wrong');
+        setMsg('不對！再試試','err');
+        setTimeout(()=>{
+          ea.classList.remove('flip','wrong');eb.classList.remove('flip','wrong');
+          mathOpen=[];mathLock=false;setMsg('繼續！');
+        },800);
+      },300);
+    }
+  }
+}
+// hint for math
+function useHintRescue(){
+  if(stage.type==='flip'){
+    const unmatched=flipCards.map((c,i)=>({c,i})).filter(x=>!x.c.matched&&!flipOpen.includes(x.i));
+    if(unmatched.length<2){setMsg('已無可提示的牌','rescue');return;}
+    const ids=[...new Set(unmatched.map(x=>x.c.id))];
+    const hintId=pick(ids);
+    unmatched.filter(x=>x.c.id===hintId).slice(0,2).forEach(x=>{
+      const el=getFlipEl(x.i);el.classList.add('hint');
+      setTimeout(()=>el.classList.remove('hint'),2500);
+    });
+    setMsg('💡 閃爍的兩張是一對！','rescue');
+  } else if(stage.type==='math'){
+    const unmatched=mathCards.map((c,i)=>({c,i})).filter(x=>!x.c.matched&&!mathOpen.includes(x.i));
+    const ids=[...new Set(unmatched.map(x=>x.c.id))];
+    if(!ids.length){setMsg('已無可提示','rescue');return;}
+    const hintId=pick(ids);
+    unmatched.filter(x=>x.c.id===hintId).slice(0,2).forEach(x=>{
+      const el=getMathEl(x.i);el.classList.add('hint');
+      setTimeout(()=>el.classList.remove('hint'),2500);
+    });
+    setMsg('💡 閃爍的算式與答案是一對！','rescue');
+  }
+}
+
+// ═══════════════════════════════════════════
+// ── 打字遊戲 ──
+// ═══════════════════════════════════════════
+function initTypeGame(cfg,si){
+  const vocabKey=GRADE_VOCAB[GRADES[curGradeIdx].id];
+  const pool=VOCAB[vocabKey]||VOCAB.animals;
+  typeWords=shuffle([...pool]).slice(0,cfg.typePairs);
+  typeIdx=0;typeScore=0;typeTotal=typeWords.length;
+  const input=document.getElementById('type-input');
+  input.value='';input.className='typing-input';
+  input.onkeydown=e=>{if(e.key==='Enter')checkTypeAnswer();};
+  input.oninput=()=>checkTypeAnswer();
+  renderTypeUI();
+  renderStatusRow();
+  setTimeout(()=>input.focus(),200);
+}
+function renderTypeUI(){
+  if(typeIdx>=typeTotal){stopTimer();finishStage(true,calcTypeStars());return;}
+  const w=typeWords[typeIdx];
+  document.getElementById('type-display').textContent=w.emoji+' '+w.en;
+  document.getElementById('type-prompt').textContent='看圖打出中文（'+w.en+'）';
+  document.getElementById('type-score').textContent=`答對 ${typeScore} / ${typeTotal}`;
+  document.getElementById('type-prog').style.width=(typeIdx/typeTotal*100)+'%';
+  const input=document.getElementById('type-input');
+  input.value='';input.className='typing-input';
+  renderStatusRow();
+  speakBilingual(w.en,w.zh);
+}
+function checkTypeAnswer(){
+  const input=document.getElementById('type-input');
+  const val=input.value.trim();
+  if(!val)return;
+  const w=typeWords[typeIdx];
+  const correct=val===w.zh||(w.zh2&&val===w.zh2);
+  if(correct){
+    input.className='typing-input correct';
+    typeScore++;typeIdx++;
+    setMsg('✓ 正確！'+w.zh,'ok');
+    setTimeout(()=>{input.value='';renderTypeUI();},500);
+  } else if(val.length>=w.zh.length){
+    input.className='typing-input wrong';
+    setMsg('✗ 應為「'+w.zh+'」','err');
+  }
+}
+function useSkipRescue(){
+  if(stage.type!=='type'&&stage.type!=='math'){setMsg('此關不支援跳過','rescue');return;}
+  if(stage.type==='type'){
+    setMsg('⏭️ 跳過這題','rescue');
+    typeIdx++;
+    setTimeout(()=>renderTypeUI(),300);
+  }
+}
+function calcTypeStars(){
+  const pct=typeScore/typeTotal;
+  return pct>=0.9?3:pct>=0.7?2:1;
+}
+
+// ═══════════════════════════════════════════
+// 結果
+// ═══════════════════════════════════════════
+function finishStage(win, stars){
+  stopTimer();
+  speechSynthesis.cancel();
+
+  // 儲存最佳成績
+  const s=GRADES[curGradeIdx].stages[curStageIdx];
+  if(win){
+    s.done=true;
+    s.bestStars=Math.max(s.bestStars,stars);
+    // 解鎖下一關
+    const next=GRADES[curGradeIdx].stages[curStageIdx+1];
+    // (next stays locked=false by checking prev.done)
+  }
+  saveProgress();
+
+  const isLast=curStageIdx>=GRADES[curGradeIdx].stages.length-1;
+  document.getElementById('r-emoji').textContent=win?'🎉':'😓';
+  document.getElementById('r-title').textContent=win?'闖關成功！':'時間到，再試一次！';
+
+  let sub='';
+  if(stage.type==='flip') sub=`翻了 ${flipTries} 次`;
+  else if(stage.type==='math') sub=`翻了 ${mathTries} 次`;
+  else sub=`答對 ${typeScore} / ${typeTotal} 題`;
+  document.getElementById('r-sub').textContent=sub;
+
+  document.getElementById('r-stars').textContent=win?'★'.repeat(stars)+'☆'.repeat(3-stars):'☆☆☆';
+
+  const statsEl=document.getElementById('r-stats');
+  if(stage.type==='flip'||stage.type==='math'){
+    const tries=stage.type==='flip'?flipTries:mathTries;
+    const left2=stage.type==='flip'?flipLeft:mathLeft;
+    const total2=stage.type==='flip'?stageConfig(curStageIdx+1,'flip').flipPairs:stageConfig(curStageIdx+1,'math').flipPairs;
+    statsEl.innerHTML=`
+      <div class="result-stat"><div class="result-stat-val">${tries}</div><div class="result-stat-label">翻牌次數</div></div>
+      <div class="result-stat"><div class="result-stat-val">${total2-left2}</div><div class="result-stat-label">消除對數</div></div>
+      <div class="result-stat"><div class="result-stat-val">${timeLeft}s</div><div class="result-stat-label">剩餘時間</div></div>`;
+  } else {
+    statsEl.innerHTML=`
+      <div class="result-stat"><div class="result-stat-val">${typeScore}</div><div class="result-stat-label">答對題數</div></div>
+      <div class="result-stat"><div class="result-stat-val">${typeTotal}</div><div class="result-stat-label">總題數</div></div>
+      <div class="result-stat"><div class="result-stat-val">${timeLeft}s</div><div class="result-stat-label">剩餘時間</div></div>`;
+  }
+
+  const nextBtn=document.getElementById('r-next-btn');
+  nextBtn.style.display=win&&!isLast?'':'none';
+  if(win)spawnConfetti('confetti2');
+  show('screen-result');
+}
+
+// ═══════════════════════════════════════════
+// confetti
+// ═══════════════════════════════════════════
+function spawnConfetti(id){
+  const wrap=document.getElementById(id);if(!wrap)return;wrap.innerHTML='';
+  const cols=['#60A5FA','#F472B6','#34D399','#FBBF24','#F87171','#A78BFA'];
+  for(let i=0;i<20;i++){
+    const d=document.createElement('div');d.className='dot';
+    d.style.cssText=`left:${5+Math.random()*90}%;background:${cols[i%cols.length]};animation-delay:${(Math.random()*.4).toFixed(2)}s;animation-duration:${(1+Math.random()*.6).toFixed(2)}s;`;
+    wrap.appendChild(d);
+  }
+  setTimeout(()=>wrap.innerHTML='',2000);
+}
+
+// ═══════════════════════════════════════════
+// 初始化
+// ═══════════════════════════════════════════
+buildGradeGrid();
+</script>
+</body>
+</html>
