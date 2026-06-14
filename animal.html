@@ -155,7 +155,30 @@ let scores=[0,0],pairs_by=[0,0],turn=0;
 let PAIRS=18,COLS=6;
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
-function speak(en,zh){if(!window.speechSynthesis)return;speechSynthesis.cancel();const u1=new SpeechSynthesisUtterance(en);u1.lang='en-US';u1.rate=1.15;u1.pitch=1.1;const u2=new SpeechSynthesisUtterance(zh);u2.lang='zh-TW';u2.rate=1.1;u2.pitch=1.05;speechSynthesis.speak(u1);speechSynthesis.speak(u2);}
+// ── 跨平台音效（iOS + Android）──────────────────────────
+let audioUnlocked=false,voiceEN=null,voiceZH=null;
+function loadVoices(){const vs=speechSynthesis.getVoices();voiceEN=vs.find(v=>v.lang==='en-US')||vs.find(v=>v.lang.startsWith('en'))||null;voiceZH=vs.find(v=>v.lang==='zh-TW')||vs.find(v=>v.lang.startsWith('zh'))||null;}
+if(window.speechSynthesis){loadVoices();speechSynthesis.addEventListener('voiceschanged',loadVoices);}
+function unlockAudio(){if(audioUnlocked||!window.speechSynthesis)return;const u=new SpeechSynthesisUtterance('');u.volume=0;speechSynthesis.speak(u);audioUnlocked=true;loadVoices();}
+document.addEventListener('touchstart',unlockAudio,{once:true});
+document.addEventListener('mousedown',unlockAudio,{once:true});
+let resumeTimer=null;
+function keepAlive(){resumeTimer=setInterval(()=>{if(window.speechSynthesis&&speechSynthesis.paused)speechSynthesis.resume();},200);}
+function stopKeepAlive(){clearInterval(resumeTimer);}
+function speakOne(text,lang,voice,onDone){
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang=lang;u.rate=0.95;u.pitch=1.05;u.volume=1;
+  if(voice)u.voice=voice;
+  u.onend=()=>{stopKeepAlive();onDone&&onDone();};
+  u.onerror=()=>{stopKeepAlive();onDone&&onDone();};
+  u.onstart=()=>keepAlive();
+  speechSynthesis.speak(u);
+}
+function speak(en,zh){
+  if(!window.speechSynthesis)return;
+  stopKeepAlive();speechSynthesis.cancel();
+  setTimeout(()=>{speakOne(en,'en-US',voiceEN,()=>{setTimeout(()=>speakOne(zh,'zh-TW',voiceZH,null),80);});},60);
+}
 function selMode(el){document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');selModeVal=el.dataset.mode;}
 function selSize(el){document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');selSizeVal=parseInt(el.dataset.size);}
 function goMenu(){speechSynthesis.cancel();show('screen-menu');}
@@ -217,6 +240,7 @@ function renderGrid(){
 
 function getEl(i){return document.querySelector('[data-i="'+i+'"]');}
 function onTap(i){
+  unlockAudio();
   if(lock)return;const c=cards[i];if(c.matched||open.includes(i))return;
   const el=getEl(i);if(selModeVal==='multi')el.classList.add(turn===0?'flip-p1':'flip-p2');
   el.classList.add('flip');speak(c.en,c.zh);
